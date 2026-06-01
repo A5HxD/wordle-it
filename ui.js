@@ -14,6 +14,7 @@
   const topListEl = document.getElementById("topList");
 
   const submitBtn = document.getElementById("submitBtn");
+  const invalidBtn = document.getElementById("invalidBtn");
   const undoBtn = document.getElementById("undoBtn");
   const resetBtn = document.getElementById("resetBtn");
 
@@ -38,6 +39,7 @@
   const OPENER_IDX_KEY = "wordle_it_opener_idx_v1";
   let manualGuess = null; // { row:number, word:string, meta:string }
   const USER_WORDS_KEY = "wordle_it_user_words_v1";
+  const INVALID_WORDS_KEY = "wordle_it_invalid_words_v1";
 
   function setCurrentGuess(word, metaText) {
     if (solved || currentRow >= MAX_ROWS) return;
@@ -70,6 +72,42 @@
     }
   }
 
+  function loadInvalidWords() {
+    try {
+      const raw = localStorage.getItem(INVALID_WORDS_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Set();
+      const out = new Set();
+      for (const w of parsed) {
+        const normalized = WordleItSolver.normalizeWord(w);
+        if (WordleItSolver.isLowerAlphaWord(normalized)) out.add(normalized);
+      }
+      return out;
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  function saveInvalidWords(set) {
+    try {
+      localStorage.setItem(INVALID_WORDS_KEY, JSON.stringify(Array.from(set).sort()));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markGuessInvalid(word) {
+    const normalized = WordleItSolver.normalizeWord(word);
+    if (!WordleItSolver.isLowerAlphaWord(normalized)) return { ok: false, reason: "invalid" };
+    const invalid = loadInvalidWords();
+    if (invalid.has(normalized)) return { ok: false, reason: "exists" };
+    invalid.add(normalized);
+    if (!saveInvalidWords(invalid)) return { ok: false, reason: "storage" };
+    return { ok: true, word: normalized };
+  }
+
   function saveUserWord(word) {
     const normalized = WordleItSolver.normalizeWord(word);
     if (!WordleItSolver.isLowerAlphaWord(normalized)) return { ok: false, reason: "invalid" };
@@ -88,7 +126,8 @@
     const base = Array.isArray(window.WORDLE_IT_DEFAULT_WORDS) ? window.WORDLE_IT_DEFAULT_WORDS : [];
     const merged = new Set(base);
     for (const w of loadUserWords()) merged.add(w);
-    return Array.from(merged);
+    const invalid = loadInvalidWords();
+    return Array.from(merged).filter((w) => !invalid.has(w));
   }
 
   function openLearnModal(message) {
@@ -470,6 +509,29 @@
     computeAndRenderSuggestion();
 
     submitBtn.addEventListener("click", submitFeedback);
+    invalidBtn.addEventListener("click", () => {
+      if (solved || currentRow >= MAX_ROWS) return;
+      const guess = suggestedWordEl.textContent.trim().toLowerCase();
+      const res = markGuessInvalid(guess);
+      if (!res.ok) {
+        suggestedMetaEl.textContent =
+          res.reason === "exists"
+            ? "Already marked invalid; suggesting another…"
+            : res.reason === "storage"
+              ? "Could not save invalid-word list (storage blocked)."
+              : "Current guess is not a valid 5-letter word.";
+      } else {
+        suggestedMetaEl.textContent = `Marked "${res.word.toUpperCase()}" as invalid (Wordle rejected it).`;
+      }
+
+      // Remove from current pools immediately so it won't be suggested again this session.
+      allowedGuesses = allowedGuesses.filter((w) => w !== guess);
+      candidates = candidates.filter((w) => w !== guess);
+      manualGuess = null;
+      openerCache = null;
+      clearRow(currentRow);
+      computeAndRenderSuggestion();
+    });
     undoBtn.addEventListener("click", undoRow);
     resetBtn.addEventListener("click", resetAll);
 
