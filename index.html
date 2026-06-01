@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wordle-It Solver</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__title">WORDLE-IT</div>
+        <div class="brand__subtitle">Interactive entropy-based solver</div>
+      </div>
+      <button id="resetBtn" class="btn btn--ghost" type="button" title="Reset">
+        Reset
+      </button>
+    </header>
+
+    <main class="layout">
+      <section class="boardWrap" aria-label="Wordle-like board">
+        <div id="board" class="board" role="grid" aria-label="Feedback board"></div>
+        <div class="boardActions">
+          <button id="submitBtn" class="btn btn--primary" type="button">
+            Submit feedback
+          </button>
+          <button id="undoBtn" class="btn btn--ghost" type="button">
+            Undo row
+          </button>
+        </div>
+      </section>
+
+      <aside class="side" aria-label="Solver info">
+        <section class="card">
+          <h2 class="card__title">Suggested Guess</h2>
+          <div class="suggested">
+            <div id="suggestedWord" class="suggested__word">—</div>
+            <div id="suggestedMeta" class="suggested__meta">Loading…</div>
+          </div>
+          <div class="hint">
+            Click tiles to cycle: grey → yellow → green.
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card__title">Candidates</h2>
+          <div class="kv">
+            <div class="kv__k">Remaining</div>
+            <div id="remainingCount" class="kv__v">—</div>
+          </div>
+          <div class="kv">
+            <div class="kv__k">Mode</div>
+            <div id="modeLabel" class="kv__v">—</div>
+          </div>
+          <div class="divider"></div>
+          <h3 class="card__subtitle">Top picks</h3>
+          <div id="topList" class="topList" aria-label="Top suggestions"></div>
+        </section>
+
+        <!-- Word list management UI removed (offline-only, built-in corpus). -->
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <span class="muted small">
+        Not affiliated with NYT Wordle. This tool only suggests guesses.
+      </span>
+    </footer>
+
+    <script>
+      // Basic diagnostics for file:// usage
+      window.addEventListener("error", (e) => {
+        try {
+          const el = document.getElementById("suggestedMeta");
+          if (el) el.textContent = `Error: ${e.message}`;
+        } catch (_) {}
+      });
+    </script>
+    <script src="words.js"></script>
+    <script src="solver.js"></script>
+    <script src="ui.js"></script>
+  </body>
+</html>
