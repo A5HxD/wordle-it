@@ -17,6 +17,13 @@
   const undoBtn = document.getElementById("undoBtn");
   const resetBtn = document.getElementById("resetBtn");
 
+  const learnModalEl = document.getElementById("learnModal");
+  const learnMessageEl = document.getElementById("learnMessage");
+  const learnWordInputEl = document.getElementById("learnWordInput");
+  const learnSaveBtn = document.getElementById("learnSaveBtn");
+  const learnCancelBtn = document.getElementById("learnCancelBtn");
+  const learnStatusEl = document.getElementById("learnStatus");
+
   const STATE_ABSENT = 0;
   const STATE_PRESENT = 1;
   const STATE_CORRECT = 2;
@@ -30,6 +37,7 @@
   let openerCache = null; // { topWide: [{word, score}], stats }
   const OPENER_IDX_KEY = "wordle_it_opener_idx_v1";
   let manualGuess = null; // { row:number, word:string, meta:string }
+  const USER_WORDS_KEY = "wordle_it_user_words_v1";
 
   function setCurrentGuess(word, metaText) {
     if (solved || currentRow >= MAX_ROWS) return;
@@ -46,6 +54,55 @@
     candidates = words.slice(); // use same list as possible answers by default
     // UI label removed; keep word list changes internal.
     void reasonLabel;
+  }
+
+  function loadUserWords() {
+    try {
+      const raw = localStorage.getItem(USER_WORDS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((w) => WordleItSolver.normalizeWord(w))
+        .filter((w) => WordleItSolver.isLowerAlphaWord(w));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveUserWord(word) {
+    const normalized = WordleItSolver.normalizeWord(word);
+    if (!WordleItSolver.isLowerAlphaWord(normalized)) return { ok: false, reason: "invalid" };
+    const existing = new Set(loadUserWords());
+    if (existing.has(normalized)) return { ok: false, reason: "exists" };
+    existing.add(normalized);
+    try {
+      localStorage.setItem(USER_WORDS_KEY, JSON.stringify(Array.from(existing).sort()));
+      return { ok: true };
+    } catch (_) {
+      return { ok: false, reason: "storage" };
+    }
+  }
+
+  function mergedCorpus() {
+    const base = Array.isArray(window.WORDLE_IT_DEFAULT_WORDS) ? window.WORDLE_IT_DEFAULT_WORDS : [];
+    const merged = new Set(base);
+    for (const w of loadUserWords()) merged.add(w);
+    return Array.from(merged);
+  }
+
+  function openLearnModal(message) {
+    learnStatusEl.textContent = "";
+    learnMessageEl.textContent = message || "What was the correct word?";
+    learnWordInputEl.value = "";
+    learnModalEl.classList.add("is-open");
+    learnModalEl.setAttribute("aria-hidden", "false");
+    setTimeout(() => learnWordInputEl.focus(), 0);
+  }
+
+  function closeLearnModal() {
+    learnModalEl.classList.remove("is-open");
+    learnModalEl.setAttribute("aria-hidden", "true");
   }
 
   function tileEl(row, col) {
@@ -332,10 +389,19 @@
     }
 
     candidates = WordleItSolver.filterCandidates(candidates, guess, pattern);
+    if (candidates.length === 0) {
+      // User might be using a real Wordle answer not in our corpus; offer to learn it.
+      openLearnModal(
+        "No candidates matched your feedback. If you know the correct word, enter it to add it to the corpus for future runs."
+      );
+    }
     if (currentRow >= MAX_ROWS) {
       computeAndRenderSuggestion();
       submitBtn.disabled = true;
       undoBtn.disabled = false;
+      openLearnModal(
+        "Out of rows. If you know the correct word, enter it to add it to the corpus for future runs."
+      );
       return;
     }
 
@@ -399,13 +465,36 @@
         "Error: solver failed to load. Open DevTools Console for details.";
       return;
     }
-    setWordList(window.WORDLE_IT_DEFAULT_WORDS, "defaults");
+    setWordList(mergedCorpus(), "defaults+learned");
     undoBtn.disabled = true;
     computeAndRenderSuggestion();
 
     submitBtn.addEventListener("click", submitFeedback);
     undoBtn.addEventListener("click", undoRow);
     resetBtn.addEventListener("click", resetAll);
+
+    learnCancelBtn.addEventListener("click", closeLearnModal);
+    learnSaveBtn.addEventListener("click", () => {
+      const word = learnWordInputEl.value;
+      const res = saveUserWord(word);
+      if (!res.ok) {
+        learnStatusEl.textContent =
+          res.reason === "exists"
+            ? "That word is already saved."
+            : res.reason === "storage"
+              ? "Could not save (storage blocked)."
+              : "Please enter a valid 5-letter word (a–z).";
+        return;
+      }
+      learnStatusEl.textContent = "Saved. Resetting with updated corpus…";
+      // Rebuild corpus and reset.
+      setWordList(mergedCorpus(), "defaults+learned");
+      closeLearnModal();
+      resetAll();
+    });
+
+    // Close when clicking backdrop
+    learnModalEl.querySelector(".modal__backdrop").addEventListener("click", closeLearnModal);
   }
 
   init();

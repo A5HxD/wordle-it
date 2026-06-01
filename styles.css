@@ -213,3 +213,60 @@ body{
 @media (max-width: 520px){
   .tile{width: 54px; height:54px; font-size: 24px}
 }
+
+.modal{
+  position: fixed;
+  inset: 0;
+  display:none;
+  z-index: 50;
+}
+.modal.is-open{display:block}
+.modal__backdrop{
+  position:absolute;
+  inset:0;
+  background: rgba(0,0,0,.55);
+}
+.modal__card{
+  position:relative;
+  width:min(520px, calc(100% - 24px));
+  margin: 10vh auto 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding:16px;
+}
+.modal__title{
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+.modal__text{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.modal__input{
+  margin-top: 12px;
+  width:100%;
+  background: rgba(0,0,0,.18);
+  border:1px solid var(--border);
+  border-radius: 12px;
+  padding:12px 12px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  outline:none;
+}
+.modal__input:focus{border-color:#3c4a67}
+.modal__actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top: 12px;
+}
+.modal__card .small{margin-top:10px}

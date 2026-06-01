@@ -67,6 +67,31 @@
       </span>
     </footer>
 
+    <div id="learnModal" class="modal" aria-hidden="true" role="dialog" aria-label="Teach solver">
+      <div class="modal__backdrop"></div>
+      <div class="modal__card">
+        <div class="modal__title">Teach Wordle-It</div>
+        <div id="learnMessage" class="modal__text">
+          Looks like the solver couldn’t finish. What was the correct word?
+        </div>
+        <input
+          id="learnWordInput"
+          class="modal__input"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="5"
+          placeholder="e.g. CRANE"
+        />
+        <div class="modal__actions">
+          <button id="learnSaveBtn" class="btn btn--primary" type="button">Save word</button>
+          <button id="learnCancelBtn" class="btn btn--ghost" type="button">Not now</button>
+        </div>
+        <div id="learnStatus" class="muted small"></div>
+      </div>
+    </div>
+
     <script>
       // Basic diagnostics for file:// usage
       window.addEventListener("error", (e) => {
