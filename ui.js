@@ -17,6 +17,7 @@
   const invalidBtn = document.getElementById("invalidBtn");
   const undoBtn = document.getElementById("undoBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const solvedBtn = document.getElementById("solvedBtn");
 
   const learnModalEl = document.getElementById("learnModal");
   const learnMessageEl = document.getElementById("learnMessage");
@@ -207,6 +208,13 @@
       pattern.push(Number(tileEl(row, c).dataset.state || "0"));
     }
     return pattern;
+  }
+
+  function setRowAllGreen(row) {
+    for (let c = 0; c < WORD_LEN; c++) {
+      const el = tileEl(row, c);
+      el.dataset.state = String(STATE_CORRECT);
+    }
   }
 
   function clearRow(row) {
@@ -509,6 +517,14 @@
     computeAndRenderSuggestion();
 
     submitBtn.addEventListener("click", submitFeedback);
+    solvedBtn.addEventListener("click", () => {
+      if (solved || currentRow >= MAX_ROWS) return;
+      const guess = suggestedWordEl.textContent.trim().toLowerCase();
+      if (!WordleItSolver.isLowerAlphaWord(guess)) return;
+      // Mark the current row as all-green and submit immediately.
+      setRowAllGreen(currentRow);
+      submitFeedback();
+    });
     invalidBtn.addEventListener("click", () => {
       if (solved || currentRow >= MAX_ROWS) return;
       const guess = suggestedWordEl.textContent.trim().toLowerCase();
